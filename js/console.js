@@ -488,13 +488,47 @@
     const c = document.getElementById('app-container');
     c.innerHTML = `
       <h1 class="page-title">Struktur Konten Sertifikat</h1>
-      <p class="page-subtitle">Tentukan kolom yang wajib diisi operator untuk setiap acara.</p>
+      <p class="page-subtitle">Setiap template memiliki struktur variabel kontennya masing-masing — pilih template untuk mengaturnya.</p>
       <div class="callout callout-dark mb-16">
         <i class="bi bi-shield-lock" style="margin-top:1px;"></i>
-        <div>Field <strong>Nama Peserta</strong> ({{nama_peserta}}) dan <strong>Peran</strong> ({{peran}}) terkunci karena diisi otomatis dari formulir pendaftaran peserta. Operator tidak dapat mengubah struktur ini, hanya mengisi nilainya.</div>
+        <div>Field <strong>Nama Peserta</strong> ({{nama_peserta}}) dan <strong>Peran</strong> ({{peran}}) terkunci dan berlaku untuk SEMUA template karena diisi otomatis dari formulir pendaftaran peserta.</div>
       </div>
-      <div class="card" id="fieldsCard">${skeletonBlock(240)}</div>`;
-  
+      <div class="card mb-16">
+        <label class="form-label">Pilih Template</label>
+        <select class="form-control" id="fieldsTemplateSelect" onchange="onFieldsTemplateChange()">
+          <option value="">Memuat daftar template...</option>
+        </select>
+      </div>
+      <div class="card" id="fieldsCard" style="display:none;"></div>`;
+
+    window._fieldsSelectedTemplate = '';
+
+    GAS()
+      .withSuccessHandler(res => {
+        if (!isCurrentPage('fields')) return;
+        const sel = document.getElementById('fieldsTemplateSelect');
+        if (!sel) return;
+        if (!res.success || res.data.length === 0) {
+          sel.innerHTML = '<option value="">Belum ada template — buat dulu di menu "Template Sertifikat"</option>';
+          return;
+        }
+        AppState.templates = res.data;
+        sel.innerHTML = '<option value="">— Pilih template —</option>' +
+          res.data.map(t => `<option value="${t.ID}">${escapeHtml(t.Nama)}${t.Status !== 'Active' ? ' (nonaktif)' : ''}</option>`).join('');
+      })
+      .withFailureHandler(err => showToast('Error', err.message, 'danger'))
+      .getTemplates();
+  }
+
+  function onFieldsTemplateChange() {
+    const templateId = document.getElementById('fieldsTemplateSelect').value;
+    const card = document.getElementById('fieldsCard');
+    window._fieldsSelectedTemplate = templateId;
+    if (!templateId) { card.style.display = 'none'; card.innerHTML = ''; return; }
+
+    card.style.display = '';
+    card.innerHTML = skeletonBlock(240);
+
     GAS()
       .withSuccessHandler(res => {
         if (!isCurrentPage('fields')) return;
@@ -506,7 +540,7 @@
         if (!isCurrentPage('fields')) return;
         renderFetchError('fieldsCard', err.message, 'renderAdminFields');
       })
-      .getCertificateFields();
+      .getCertificateFields(templateId);
   }
   
   function renderFieldsEditor() {
@@ -514,9 +548,9 @@
     if (!card) return;
     card.innerHTML = `
       <div id="fieldsList">${AppState.certificateFields.map((f, i) => fieldRow(f, i)).join('')}</div>
-      <button class="btn btn-secondary mt-16" onclick="addFieldRow()"><i class="bi bi-plus-lg"></i> Tambah Field Kustom</button>
+      <button class="btn btn-secondary mt-16" onclick="addFieldRow()"><i class="bi bi-plus-lg"></i> Tambah Field Kustom untuk Template Ini</button>
       <div class="divider"></div>
-      <button class="btn btn-primary" onclick="saveFields()" id="saveFieldsBtn"><i class="bi bi-save"></i> Simpan Struktur</button>`;
+      <button class="btn btn-primary" onclick="saveFields()" id="saveFieldsBtn"><i class="bi bi-save"></i> Simpan Struktur Template Ini</button>`;
   }
   
   function fieldRow(f, i) {
@@ -541,7 +575,7 @@
             </select>
           </div>
           <div class="flex gap-8" style="justify-content:flex-end;">
-            ${locked ? '<span class="badge badge-info"><i class="bi bi-lock-fill"></i> Terkunci</span>' : `<button class="btn btn-danger btn-sm" onclick="removeFieldRow(this)"><i class="bi bi-trash"></i></button>`}
+            ${locked ? '<span class="badge badge-info"><i class="bi bi-lock-fill"></i> Semua Template</span>' : `<button class="btn btn-danger btn-sm" onclick="removeFieldRow(this)"><i class="bi bi-trash"></i></button>`}
           </div>
         </div>
       </div>`;
@@ -558,17 +592,19 @@
   }
   
   function saveFields() {
+    if (!window._fieldsSelectedTemplate) { showToast('Belum lengkap', 'Pilih template terlebih dahulu.', 'warning'); return; }
     const rows = document.querySelectorAll('#fieldsList [data-idx]');
     const fields = [];
     rows.forEach((row, i) => {
       const original = AppState.certificateFields[i];
+      const locked = original.IsLocked === true || original.IsLocked === 'true';
       fields.push({
         ID: original.ID,
-        FieldLabel: row.querySelector('.field-label').value.trim(),
-        VariableTag: row.querySelector('.field-tag').value.trim(),
-        InputType: row.querySelector('.field-type').value,
+        FieldLabel: locked ? original.FieldLabel : row.querySelector('.field-label').value.trim(),
+        VariableTag: locked ? original.VariableTag : row.querySelector('.field-tag').value.trim(),
+        InputType: locked ? original.InputType : row.querySelector('.field-type').value,
         Required: true,
-        IsLocked: original.IsLocked === true || original.IsLocked === 'true'
+        IsLocked: locked
       });
     });
     const btn = document.getElementById('saveFieldsBtn');
@@ -576,13 +612,13 @@
   
     GAS()
       .withSuccessHandler(res => {
-        btn.disabled = false; btn.innerHTML = '<i class="bi bi-save"></i> Simpan Struktur';
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-save"></i> Simpan Struktur Template Ini';
         if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
         showToast('Berhasil', res.message, 'success');
-        renderAdminFields();
+        onFieldsTemplateChange();
       })
       .withFailureHandler(err => { btn.disabled = false; showToast('Error', err.message, 'danger'); })
-      .saveCertificateFields(fields);
+      .saveCertificateFields(window._fieldsSelectedTemplate, fields);
   }
   
   /**
@@ -1008,16 +1044,27 @@
         GAS()
           .withSuccessHandler(tplRes => {
             if (!isCurrentPage('op-content')) return;
+            const templates = tplRes.success ? tplRes.data : [];
+            window._opTemplatesList = templates;
+            const initialTemplateId = eventRes.data.TemplateId || (templates.find(t => t.Status === 'Active') || {}).ID || '';
+            window._opSelectedTemplate = initialTemplateId;
+
+            if (!initialTemplateId) {
+              // Belum ada template terpilih sama sekali — tampilkan grid saja,
+              // tanpa field kustom (nanti dimuat begitu operator memilih satu).
+              renderOperatorContentBody(eventRes.data, templates, []);
+              return;
+            }
             GAS()
               .withSuccessHandler(fieldsRes => {
                 if (!isCurrentPage('op-content')) return;
-                renderOperatorContentBody(eventRes.data, tplRes.success ? tplRes.data : [], fieldsRes.success ? fieldsRes.data : []);
+                renderOperatorContentBody(eventRes.data, templates, fieldsRes.success ? fieldsRes.data : []);
               })
               .withFailureHandler(err => {
                 if (!isCurrentPage('op-content')) return;
                 renderFetchError('opContentBody', err.message, 'renderOperatorContent');
               })
-              .getCertificateFields();
+              .getCertificateFields(initialTemplateId);
           })
           .withFailureHandler(err => {
             if (!isCurrentPage('op-content')) return;
@@ -1036,7 +1083,9 @@
     const body = document.getElementById('opContentBody');
     if (!body) return;
     window._opEditingEvent = ev;
-    window._opSelectedTemplate = ev.TemplateId || (templates.find(t => t.Status === 'Active') || {}).ID;
+    // window._opSelectedTemplate SUDAH ditentukan oleh pemanggil (renderOperatorContent
+    // atau selectOpTemplate) — tidak dihitung ulang di sini, supaya pilihan operator
+    // yang sedang aktif tidak tertimpa saat berpindah template.
     const activeTemplates = templates.filter(t => t.Status === 'Active');
     const customFields = fields.filter(f => !(f.IsLocked === true || f.IsLocked === 'true'));
   
@@ -1053,12 +1102,13 @@
       </div>
   
       <h2 class="section-title">2. Lengkapi Variabel Konten</h2>
-      <div class="callout callout-info mb-16"><i class="bi bi-info-circle" style="margin-top:1px;"></i><div>Field <strong>Nama Peserta</strong> dan <strong>Peran</strong> otomatis terisi dari formulir pendaftaran peserta — tidak perlu diisi manual di sini.</div></div>
+      <div class="callout callout-info mb-16"><i class="bi bi-info-circle" style="margin-top:1px;"></i><div>Field <strong>Nama Peserta</strong> dan <strong>Peran</strong> otomatis terisi dari formulir pendaftaran peserta — tidak perlu diisi manual di sini. Struktur field kustom di bawah mengikuti template yang dipilih di atas.</div></div>
+      ${!window._opSelectedTemplate ? '<div class="card table-empty">Pilih salah satu template di atas untuk melihat variabel kontennya.</div>' : `
       <div class="card">
         <div class="form-group">
           <label class="form-label">Format Nomor Sertifikat</label>
           <input type="text" class="form-control mono op-field" data-tag="nomor_sertifikat" value="${escapeHtml((ev.ContentValues || {}).nomor_sertifikat || 'CERT/{YYYY}/{SEQ:000}')}">
-          <div class="form-hint">Gunakan token <span class="tag-chip">{YYYY}</span> untuk tahun dan <span class="tag-chip">{SEQ:000}</span> untuk nomor urut otomatis.</div>
+          <div class="form-hint">Gunakan <span class="tag-chip">{YYYY}</span> untuk tahun, dan <span class="tag-chip">{SEQ:000}</span> untuk nomor urut mulai dari 1 (atau <span class="tag-chip">{SEQ:030}</span> untuk mulai dari nomor 030 dan seterusnya).</div>
         </div>
         ${customFields.map(f => `
           <div class="form-group">
@@ -1067,10 +1117,10 @@
               ? `<textarea class="form-control op-field" data-tag="${f.VariableTag}">${escapeHtml((ev.ContentValues || {})[f.VariableTag] || '')}</textarea>`
               : `<input type="${f.InputType === 'date' ? 'date' : 'text'}" class="form-control op-field" data-tag="${f.VariableTag}" value="${escapeHtml((ev.ContentValues || {})[f.VariableTag] || '')}">`}
           </div>`).join('')}
-      </div>
+      </div>`}
       <div class="flex-between mt-24">
         <span class="text-muted" style="font-size:12px;" id="draftSavedNote"></span>
-        <button class="btn btn-primary" onclick="saveOperatorContent()" id="saveContentBtn"><i class="bi bi-arrow-right"></i> Simpan & Lanjut ke Pratinjau</button>
+        <button class="btn btn-primary" onclick="saveOperatorContent()" id="saveContentBtn" ${!window._opSelectedTemplate ? 'disabled' : ''}><i class="bi bi-arrow-right"></i> Simpan & Lanjut ke Pratinjau</button>
       </div>`;
   
     // Optimistic autosave draft ke localStorage (prinsip gas-instant-ux)
@@ -1085,14 +1135,32 @@
   }
   
   function selectOpTemplate(id) {
+    if (id === window._opSelectedTemplate) return;
+
+    // Simpan dulu nilai yang sudah sempat diketik (mis. format nomor sertifikat)
+    // supaya tidak hilang saat struktur field dimuat ulang untuk template baru.
+    const currentValues = {};
+    document.querySelectorAll('.op-field').forEach(el => currentValues[el.dataset.tag] = el.value);
+    window._opEditingEvent.ContentValues = Object.assign({}, window._opEditingEvent.ContentValues, currentValues);
+
     window._opSelectedTemplate = id;
-    document.querySelectorAll('#opTemplateGrid .template-card').forEach(card => {
-      const isSel = card.dataset.tpl === id;
-      card.classList.toggle('selected', isSel);
-      const badge = card.querySelector('.check-badge');
-      if (isSel && !badge) card.insertAdjacentHTML('afterbegin', '<div class="check-badge"><i class="bi bi-check-lg"></i></div>');
-      if (!isSel && badge) badge.remove();
-    });
+    const ev = window._opEditingEvent;
+    const templates = window._opTemplatesList || [];
+    document.getElementById('opContentBody').innerHTML = skeletonBlock(320);
+
+    // Tiap template punya struktur variabel kontennya sendiri — muat ulang
+    // dari server setiap kali template berganti.
+    GAS()
+      .withSuccessHandler(res => {
+        if (!isCurrentPage('op-content')) return;
+        if (!res.success) { renderFetchError('opContentBody', res.message, 'renderOperatorContent'); return; }
+        renderOperatorContentBody(ev, templates, res.data);
+      })
+      .withFailureHandler(err => {
+        if (!isCurrentPage('op-content')) return;
+        renderFetchError('opContentBody', err.message, 'renderOperatorContent');
+      })
+      .getCertificateFields(id);
   }
   
   function saveOperatorContent() {
