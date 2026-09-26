@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pendaftaran Sertifikat — Certiflow</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p class="text-muted" style="font-size:13px;">Memuat halaman pendaftaran...</p>
+  </div>
+
+  <!-- ============================================================
+       MODE PUBLIK — form pendaftaran peserta (tanpa login, tanpa sidebar)
+       Dibuka via ?event=ID, misal: public.html?event=ABC123
+       ============================================================ -->
+  <div id="publicRoot" class="public-shell"></div>
+
+  <!-- Modal generik (tidak dipakai di mode publik, disiapkan untuk konsistensi) -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal-box" id="modalBox"></div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    // Pengganti server-side templating GAS (<?!= isPublicMode ?> dkk) yang tidak
+    // ada lagi karena backend sekarang murni REST API (bukan HtmlService).
+    // ID acara dibaca langsung dari query string halaman statis ini.
+    window.APP_MODE = 'public';
+    window.PUBLIC_EVENT_ID = new URLSearchParams(location.search).get('event');
+  </script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/public.js"></script>
+</body>
+</html>

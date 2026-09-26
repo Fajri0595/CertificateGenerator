@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Certiflow — Konsol</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <p class="text-muted" style="font-size:13px;">Memuat aplikasi...</p>
+  </div>
+
+  <!-- ============================================================
+       MODE KONSOL — Admin & Operator (SPA dengan sidebar)
+       ============================================================ -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <div class="app-shell">
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">CG</div>
+        <div>
+          <div class="brand-name">Certiflow</div>
+        </div>
+        <span class="brand-role" id="sidebarRoleTag" style="margin-left:auto;"></span>
+      </div>
+      <ul class="sidebar-nav" id="sidebarNav"><!-- diisi JS sesuai peran --></ul>
+      <div class="sidebar-footer" id="sidebarFooter" style="display:none;">
+        <div class="sidebar-user">
+          <div class="avatar" id="userAvatar">A</div>
+          <div style="overflow:hidden;">
+            <div class="u-name" id="userName">-</div>
+            <div class="u-role" id="userRoleLabel">-</div>
+          </div>
+        </div>
+        <a href="javascript:void(0)" class="logout-link" onclick="handleLogout()">
+          <i class="bi bi-box-arrow-left"></i> Keluar
+        </a>
+      </div>
+    </nav>
+
+    <main class="main-content" id="mainContent">
+      <div class="topbar-mobile">
+        <button class="btn btn-icon btn-secondary" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+        <strong id="mobileTitle">Certiflow</strong>
+        <span style="width:36px;"></span>
+      </div>
+      <div id="app-container"><!-- seluruh halaman disuntikkan di sini via JS --></div>
+    </main>
+  </div>
+
+  <!-- Modal generik -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal-box" id="modalBox"></div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    // Pengganti server-side templating GAS (<?!= isPublicMode ?> dkk) yang tidak
+    // ada lagi karena backend sekarang murni REST API (bukan HtmlService).
+    window.APP_MODE = 'console';
+  </script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/console.js"></script>
+</body>
+</html>
