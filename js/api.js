@@ -24,6 +24,7 @@ const WRITE_ACTIONS = new Set([
   'addTemplate', 'toggleTemplateStatus', 'saveCertificateFields',
   'createEvent', 'deactivateEvent', 'updateEventContent', 'publishEvent',
   'createOperatorAccount', 'toggleOperatorStatus', 'regenerateOperatorPassword',
+  'adminChangePassword',
   'previewCertificate', 'resendCertificateEmail'
 ]);
 
