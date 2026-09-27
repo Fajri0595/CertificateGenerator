@@ -116,7 +116,6 @@
                 <i class="bi bi-box-arrow-in-right"></i> Masuk sebagai Admin
               </button>
             </form>
-            <p class="text-muted" style="font-size:12px;margin-top:14px;">Password awal admin dicatat di Execution Log saat setupAppEnvironment() dijalankan.</p>
           </div>
   
           <div id="loginTabOperator" class="hidden">
