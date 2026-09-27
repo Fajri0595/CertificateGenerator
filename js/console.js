@@ -90,7 +90,11 @@
     document.getElementById('app-container').innerHTML = `
       <div class="login-shell">
         <div class="login-card">
-          <div class="sidebar-logo" style="margin:0 auto 16px;width:52px;height:52px;font-size:20px;">CG</div>
+          <div style="text-align:center;margin-bottom:24px;">
+            <img src="favicon.svg" alt="Certiflow Logo" style="width:58px;height:58px;filter:drop-shadow(0 6px 16px rgba(99,102,241,0.35));margin-bottom:10px;">
+            <div style="font-weight:800;font-size:22px;letter-spacing:-0.02em;background:linear-gradient(135deg,#0f172a 0%,#4338ca 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Certiflow Pro</div>
+            <div style="font-size:12px;color:var(--text-muted);font-weight:500;">Enterprise Certificate Management Platform</div>
+          </div>
           <div class="login-tabs">
             <button class="active" id="tabAdminBtn" onclick="switchLoginTab('admin')">Admin</button>
             <button id="tabOperatorBtn" onclick="switchLoginTab('operator')">Operator</button>

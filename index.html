@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Certiflow — Konsol</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="alternate icon" href="favicon.svg">
+  <meta name="theme-color" content="#4F46E5">
+
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link href="css/style.css" rel="stylesheet">
 </head>
@@ -14,7 +18,7 @@
   <!-- Loading Overlay -->
   <div id="loadingOverlay" class="loading-overlay">
     <div class="spinner"></div>
-    <p class="text-muted" style="font-size:13px;">Memuat aplikasi...</p>
+    <p class="text-muted" style="font-size:13px;font-weight:600;">Memuat Certiflow...</p>
   </div>
 
   <!-- ============================================================
@@ -25,11 +29,13 @@
   <div class="app-shell">
     <nav class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-logo">CG</div>
-        <div>
-          <div class="brand-name">Certiflow</div>
+        <div class="sidebar-brand-wrap">
+          <img src="favicon.svg" alt="Certiflow Logo" class="brand-logo-img">
+          <div>
+            <div class="brand-name">Certi<span class="gradient-text">flow</span></div>
+          </div>
         </div>
-        <span class="brand-role" id="sidebarRoleTag" style="margin-left:auto;"></span>
+        <span class="brand-role" id="sidebarRoleTag"></span>
       </div>
       <ul class="sidebar-nav" id="sidebarNav"><!-- diisi JS sesuai peran --></ul>
       <div class="sidebar-footer" id="sidebarFooter" style="display:none;">
@@ -51,9 +57,12 @@
 
     <main class="main-content" id="mainContent">
       <div class="topbar-mobile">
-        <button class="btn btn-icon btn-secondary" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
-        <strong id="mobileTitle">Certiflow</strong>
-        <span style="width:36px;"></span>
+        <button class="btn btn-icon btn-secondary" onclick="toggleSidebar()"><i class="bi bi-list" style="font-size:18px;"></i></button>
+        <div class="flex-center gap-8">
+          <img src="favicon.svg" alt="Certiflow" style="width:24px;height:24px;">
+          <strong id="mobileTitle">Certiflow</strong>
+        </div>
+        <span style="width:38px;"></span>
       </div>
       <div id="app-container"><!-- seluruh halaman disuntikkan di sini via JS --></div>
     </main>

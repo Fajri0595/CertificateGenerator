@@ -84,9 +84,10 @@
     document.getElementById('publicRoot').innerHTML = `
       <div class="public-card">
         <div class="public-hero">
-          <span class="badge" style="background:rgba(255,255,255,0.2);color:#fff;">
-            <i class="bi bi-qr-code"></i> Portal Pendaftaran Publik
-          </span>
+          <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.18);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.3);padding:6px 14px;border-radius:999px;margin-bottom:12px;">
+            <img src="favicon.svg" alt="Certiflow Logo" style="width:20px;height:20px;">
+            <span style="font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#fff;">Certiflow &bull; Portal Resmi</span>
+          </div>
           <h1>${escapeHtml(ev.nama)}</h1>
           <div style="font-size:13px;opacity:0.9;">
             <i class="bi bi-calendar3"></i> ${formatDate(ev.tanggal)} &nbsp;•&nbsp;

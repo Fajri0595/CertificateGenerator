@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="cgBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="50%" stop-color="#7C3AED"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+    <linearGradient id="cgGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <filter id="cgShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#4F46E5" flood-opacity="0.38"/>
+    </filter>
+  </defs>
+  <!-- Background Rounded Shield / Tile -->
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="url(#cgBg)" filter="url(#cgShadow)"/>
+  <!-- Inner Glass Stroke -->
+  <rect x="9" y="9" width="46" height="46" rx="12" stroke="rgba(255,255,255,0.3)" stroke-width="1.8" fill="rgba(255,255,255,0.06)"/>
+  <!-- Certificate Outline Document -->
+  <path d="M19 16C19 14.8954 19.8954 14 21 14H37L45 22V46C45 47.1046 44.1046 48 43 48H21C19.8954 48 19 47.1046 19 46V16Z" fill="#FFFFFF" fill-opacity="0.95"/>
+  <!-- Folded Corner -->
+  <path d="M37 14V21C37 21.5523 37.4477 22 38 22H45" fill="#E2E8F0"/>
+  <!-- Document Lines -->
+  <rect x="23" y="24" width="10" height="2" rx="1" fill="#94A3B8"/>
+  <rect x="23" y="29" width="18" height="2" rx="1" fill="#CBD5E1"/>
+  <!-- Golden Seal Ribbon Badge -->
+  <circle cx="32" cy="38" r="7" fill="url(#cgGold)"/>
+  <!-- Checkmark inside seal -->
+  <path d="M29.5 38L31.2 39.8L34.8 36" stroke="#78350F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Ribbon Tails -->
+  <path d="M28.5 44L26 49L29 47.5L32 49L31.5 44.5" fill="#D97706"/>
+  <path d="M32 44.5L31.5 49L34.5 47.5L37.5 49L35 44" fill="#F59E0B"/>
+</svg>
