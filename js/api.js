@@ -196,7 +196,12 @@ async function fetchFromNetwork_(action, args, onSuccess, onFailure) {
       response = await fetch(GAS_URL + '?' + qs.toString());
     }
 
-    if (!response.ok) throw new Error('Server merespons dengan status ' + response.status + '.');
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('URL Web App tidak ditemukan (404). Pastikan GAS_URL di js/config.js sudah benar dan deployment aktif.');
+      }
+      throw new Error('Server merespons dengan status ' + response.status + '.');
+    }
     return await response.json();
   })();
 
@@ -220,6 +225,13 @@ async function fetchFromNetwork_(action, args, onSuccess, onFailure) {
         } else {
           DataCache.clear();
         }
+      }
+    }
+
+    // Deteksi jika server menolak karena sesi login kedaluwarsa
+    if (json && !json.success && json.message && (json.message.includes('Sesi') || json.message.includes('kedaluwarsa') || json.message.includes('login kembali'))) {
+      if (typeof showToast === 'function') {
+        showToast('Sesi Kedaluwarsa', json.message, 'warning');
       }
     }
 
