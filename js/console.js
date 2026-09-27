@@ -230,6 +230,7 @@
   }
 
   function handleLogout() {
+    if (typeof DataCache !== 'undefined') DataCache.clear();
     localStorage.removeItem('certgen_admin_session');
     localStorage.removeItem('certgen_operator_session');
     AppState.role = null; AppState.admin = null; AppState.operator = null;
@@ -283,8 +284,27 @@
       ].join('');
       navigateTo('op-overview');
     }
+
+    // Hangatkan cache di background agar menu lainnya terbuka instan saat diklik pertama kali
+    prefetchConsoleData();
   }
   
+  function prefetchConsoleData() {
+    setTimeout(() => {
+      if (AppState.role === 'admin') {
+        GAS().getAdminDashboardStats();
+        GAS().getTemplates();
+        GAS().getEvents();
+        GAS().getOperators();
+      } else if (AppState.role === 'operator' && AppState.operator && AppState.operator.assignedEventId) {
+        const evId = AppState.operator.assignedEventId;
+        GAS().getOperatorDashboardStats(evId);
+        GAS().getEventById(evId);
+        GAS().getTemplates();
+      }
+    }, 200);
+  }
+
   function navItem(id, icon, label) {
     return `<li><a class="nav-link" data-page="${id}" onclick="navigateTo('${id}')"><span class="icon"><i class="bi ${icon}"></i></span><span>${label}</span></a></li>`;
   }
@@ -304,6 +324,13 @@
       'op-preview': 'Pratinjau Sertifikat', 'op-publish': 'Publikasikan Tautan'
     };
     document.getElementById('mobileTitle').textContent = titles[pageId] || 'Certiflow';
+
+    const c = document.getElementById('app-container');
+    if (c) {
+      c.classList.remove('view-enter');
+      void c.offsetWidth; // Memicu reflow browser agar animasi view-enter berjalan halus
+      c.classList.add('view-enter');
+    }
   
     const router = {
       dashboard: renderAdminDashboard,
@@ -325,17 +352,29 @@
    * ADMIN — DASHBOARD
    * ============================================================
    */
-  function renderAdminDashboard() {
+  function renderAdminDashboard(forceRefresh) {
     const c = document.getElementById('app-container');
+    const cached = !forceRefresh && (typeof DataCache !== 'undefined') && DataCache.get('getAdminDashboardStats', []);
+
     c.innerHTML = `
-      <h1 class="page-title">Dashboard</h1>
-      <p class="page-subtitle">Ringkasan operasional seluruh acara dan sertifikat.</p>
-      <div id="dashStats" class="grid grid-4 mb-16">${[1,2,3,4].map(() => skeletonBlock(100)).join('')}</div>
-      <div class="card" id="dashRecent">${skeletonBlock(200)}</div>`;
+      <div class="flex-between mb-16">
+        <div>
+          <h1 class="page-title">Dashboard</h1>
+          <p class="page-subtitle" style="margin:0;">Ringkasan operasional seluruh acara dan sertifikat.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnRefreshDash" onclick="refreshAdminDashboard()">
+          <i class="bi bi-arrow-clockwise" id="iconRefreshDash"></i> Segarkan
+        </button>
+      </div>
+      <div id="dashStats" class="grid grid-4 mb-16">${cached ? '' : [1,2,3,4].map(() => skeletonBlock(100)).join('')}</div>
+      <div class="card" id="dashRecent">${cached ? '' : skeletonBlock(200)}</div>`;
   
-    GAS()
+    const gasCaller = forceRefresh ? GAS().fresh() : GAS();
+    gasCaller
       .withSuccessHandler(res => {
         if (!isCurrentPage('dashboard')) return;
+        const icon = document.getElementById('iconRefreshDash');
+        if (icon) icon.classList.remove('spin-icon');
         if (!res.success) { showToast('Error', res.message, 'danger'); return; }
         const d = res.data;
         const statsEl = document.getElementById('dashStats');
@@ -370,8 +409,18 @@
             </table>
           </div>`}`;
       })
-      .withFailureHandler(err => showToast('Error', err.message, 'danger'))
+      .withFailureHandler(err => {
+        const icon = document.getElementById('iconRefreshDash');
+        if (icon) icon.classList.remove('spin-icon');
+        showToast('Error', err.message, 'danger');
+      })
       .getAdminDashboardStats();
+  }
+
+  function refreshAdminDashboard() {
+    const icon = document.getElementById('iconRefreshDash');
+    if (icon) icon.classList.add('spin-icon');
+    renderAdminDashboard(true);
   }
   
   function statCard(icon, value, label) {
@@ -396,23 +445,41 @@
    * ADMIN — TEMPLATE SERTIFIKAT
    * ============================================================
    */
-  function renderAdminTemplates() {
+  function renderAdminTemplates(forceRefresh) {
     const c = document.getElementById('app-container');
+    const cached = !forceRefresh && (typeof DataCache !== 'undefined') && DataCache.get('getTemplates', []);
+
     c.innerHTML = `
       <div class="flex-between mb-16">
         <div>
           <h1 class="page-title">Template Sertifikat</h1>
           <p class="page-subtitle" style="margin:0;">Kelola template Google Slide yang terhubung ke aplikasi.</p>
         </div>
-        <button class="btn btn-primary" onclick="openAddTemplateModal()"><i class="bi bi-plus-lg"></i> Tambah Template</button>
+        <div class="flex gap-8">
+          <button class="btn btn-secondary btn-sm" id="btnRefreshTpl" onclick="refreshAdminTemplates()">
+            <i class="bi bi-arrow-clockwise" id="iconRefreshTpl"></i> Segarkan
+          </button>
+          <button class="btn btn-primary" onclick="openAddTemplateModal()"><i class="bi bi-plus-lg"></i> Tambah Template</button>
+        </div>
       </div>
-      <div id="templatesGrid" class="grid grid-3">${[1,2,3].map(() => skeletonBlock(180)).join('')}</div>`;
+      <div id="templatesGrid" class="grid grid-3">${cached ? '' : [1,2,3].map(() => skeletonBlock(180)).join('')}</div>`;
   
-    loadTemplates(() => renderTemplatesGrid());
+    loadTemplates(() => {
+      const icon = document.getElementById('iconRefreshTpl');
+      if (icon) icon.classList.remove('spin-icon');
+      renderTemplatesGrid();
+    }, forceRefresh);
+  }
+
+  function refreshAdminTemplates() {
+    const icon = document.getElementById('iconRefreshTpl');
+    if (icon) icon.classList.add('spin-icon');
+    renderAdminTemplates(true);
   }
   
-  function loadTemplates(callback) {
-    GAS()
+  function loadTemplates(callback, forceRefresh) {
+    const gasCaller = forceRefresh ? GAS().fresh() : GAS();
+    gasCaller
       .withSuccessHandler(res => {
         if (res.success) AppState.templates = res.data;
         else showToast('Error', res.message, 'danger');
@@ -522,6 +589,9 @@
    */
   function renderAdminFields() {
     const c = document.getElementById('app-container');
+    const cachedTpls = (typeof DataCache !== 'undefined') && DataCache.get('getTemplates', []);
+    const templates = (cachedTpls && cachedTpls.data && cachedTpls.data.success) ? cachedTpls.data.data : AppState.templates;
+
     c.innerHTML = `
       <h1 class="page-title">Struktur Konten Sertifikat</h1>
       <p class="page-subtitle">Setiap template memiliki struktur variabel kontennya masing-masing — pilih template untuk mengaturnya.</p>
@@ -532,40 +602,48 @@
       <div class="card mb-16">
         <label class="form-label">Pilih Template</label>
         <select class="form-control" id="fieldsTemplateSelect" onchange="onFieldsTemplateChange()">
-          <option value="">Memuat daftar template...</option>
+          ${templates && templates.length
+            ? '<option value="">— Pilih template —</option>' + templates.map(t => `<option value="${t.ID}">${escapeHtml(t.Nama)}${t.Status !== 'Active' ? ' (nonaktif)' : ''}</option>`).join('')
+            : '<option value="">Memuat daftar template...</option>'}
         </select>
       </div>
       <div class="card" id="fieldsCard" style="display:none;"></div>`;
 
     window._fieldsSelectedTemplate = '';
 
-    GAS()
-      .withSuccessHandler(res => {
-        if (!isCurrentPage('fields')) return;
-        const sel = document.getElementById('fieldsTemplateSelect');
-        if (!sel) return;
-        if (!res.success || res.data.length === 0) {
-          sel.innerHTML = '<option value="">Belum ada template — buat dulu di menu "Template Sertifikat"</option>';
-          return;
-        }
-        AppState.templates = res.data;
-        sel.innerHTML = '<option value="">— Pilih template —</option>' +
-          res.data.map(t => `<option value="${t.ID}">${escapeHtml(t.Nama)}${t.Status !== 'Active' ? ' (nonaktif)' : ''}</option>`).join('');
-      })
-      .withFailureHandler(err => showToast('Error', err.message, 'danger'))
-      .getTemplates();
+    if (!templates || templates.length === 0) {
+      GAS()
+        .withSuccessHandler(res => {
+          if (!isCurrentPage('fields')) return;
+          const sel = document.getElementById('fieldsTemplateSelect');
+          if (!sel) return;
+          if (!res.success || res.data.length === 0) {
+            sel.innerHTML = '<option value="">Belum ada template — buat dulu di menu "Template Sertifikat"</option>';
+            return;
+          }
+          AppState.templates = res.data;
+          sel.innerHTML = '<option value="">— Pilih template —</option>' +
+            res.data.map(t => `<option value="${t.ID}">${escapeHtml(t.Nama)}${t.Status !== 'Active' ? ' (nonaktif)' : ''}</option>`).join('');
+        })
+        .withFailureHandler(err => showToast('Error', err.message, 'danger'))
+        .getTemplates();
+    }
   }
 
-  function onFieldsTemplateChange() {
+  function onFieldsTemplateChange(forceRefresh) {
     const templateId = document.getElementById('fieldsTemplateSelect').value;
     const card = document.getElementById('fieldsCard');
     window._fieldsSelectedTemplate = templateId;
     if (!templateId) { card.style.display = 'none'; card.innerHTML = ''; return; }
 
     card.style.display = '';
-    card.innerHTML = skeletonBlock(240);
+    const cached = !forceRefresh && (typeof DataCache !== 'undefined') && DataCache.get('getCertificateFields', [templateId]);
+    if (!cached) {
+      card.innerHTML = skeletonBlock(240);
+    }
 
-    GAS()
+    const gasCaller = forceRefresh ? GAS().fresh() : GAS();
+    gasCaller
       .withSuccessHandler(res => {
         if (!isCurrentPage('fields')) return;
         if (!res.success) { renderFetchError('fieldsCard', res.message, 'renderAdminFields'); return; }
@@ -662,30 +740,48 @@
    * ADMIN — ACARA (EVENTS)
    * ============================================================
    */
-  function renderAdminEvents() {
+  function renderAdminEvents(forceRefresh) {
     const c = document.getElementById('app-container');
+    const cached = !forceRefresh && (typeof DataCache !== 'undefined') && DataCache.get('getEvents', []);
+
     c.innerHTML = `
       <div class="flex-between mb-16">
         <div>
           <h1 class="page-title">Acara</h1>
           <p class="page-subtitle" style="margin:0;">Kelola acara, alokasi operator, dan status distribusi.</p>
         </div>
-        <button class="btn btn-primary" onclick="openCreateEventModal()"><i class="bi bi-plus-lg"></i> Buat Acara</button>
+        <div class="flex gap-8">
+          <button class="btn btn-secondary btn-sm" id="btnRefreshEvents" onclick="refreshAdminEvents()">
+            <i class="bi bi-arrow-clockwise" id="iconRefreshEvents"></i> Segarkan
+          </button>
+          <button class="btn btn-primary" onclick="openCreateEventModal()"><i class="bi bi-plus-lg"></i> Buat Acara</button>
+        </div>
       </div>
-      <div class="table-wrap" id="eventsTableWrap">${skeletonBlock(240)}</div>`;
+      <div class="table-wrap" id="eventsTableWrap">${cached ? '' : skeletonBlock(240)}</div>`;
   
-    GAS()
+    const gasCaller = forceRefresh ? GAS().fresh() : GAS();
+    gasCaller
       .withSuccessHandler(res => {
+        const icon = document.getElementById('iconRefreshEvents');
+        if (icon) icon.classList.remove('spin-icon');
         if (!isCurrentPage('events')) return;
         if (!res.success) { renderFetchError('eventsTableWrap', res.message, 'renderAdminEvents'); return; }
         AppState.events = res.data;
         renderEventsTable();
       })
       .withFailureHandler(err => {
+        const icon = document.getElementById('iconRefreshEvents');
+        if (icon) icon.classList.remove('spin-icon');
         if (!isCurrentPage('events')) return;
         renderFetchError('eventsTableWrap', err.message, 'renderAdminEvents');
       })
       .getEvents();
+  }
+
+  function refreshAdminEvents() {
+    const icon = document.getElementById('iconRefreshEvents');
+    if (icon) icon.classList.add('spin-icon');
+    renderAdminEvents(true);
   }
   
   function renderEventsTable() {
@@ -714,36 +810,48 @@
   }
   
   function openCreateEventModal() {
-    const activeOperators = AppState.operatorsList.length ? AppState.operatorsList : null;
+    const cachedOps = (typeof DataCache !== 'undefined') && DataCache.get('getOperators', []);
+    if (cachedOps && cachedOps.data && cachedOps.data.success) {
+      showCreateEventModalWithOps(cachedOps.data.data.filter(o => o.Status === 'Active'));
+      return;
+    }
+    if (AppState.operatorsList && AppState.operatorsList.length) {
+      showCreateEventModalWithOps(AppState.operatorsList.filter(o => o.Status === 'Active'));
+      return;
+    }
     GAS()
       .withSuccessHandler(res => {
         const ops = res.success ? res.data.filter(o => o.Status === 'Active') : [];
-        openModal(`
-          <div class="modal-header"><h3>Buat Acara Baru</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
-          <div class="form-group">
-            <label class="form-label">Nama Acara</label>
-            <input type="text" class="form-control" id="evNama" placeholder="Misal: Webinar AI & Machine Learning 2025">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Tanggal Acara</label>
-            <input type="date" class="form-control" id="evTanggal">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Penyelenggara</label>
-            <input type="text" class="form-control" id="evPenyelenggara" placeholder="Misal: Fakultas Ilmu Komputer">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Operator Penanggung Jawab</label>
-            <select class="form-control" id="evOperator">
-              ${ops.length === 0 ? '<option value="">Belum ada operator aktif</option>' : ops.map(o => `<option value="${o.Username}">${escapeHtml(o.NamaLengkap)} (@${o.Username})</option>`).join('')}
-            </select>
-            ${ops.length === 0 ? '<div class="form-hint">Buat akun operator terlebih dahulu di menu "Akun Operator".</div>' : ''}
-          </div>
-          <button class="btn btn-primary btn-full" onclick="submitCreateEvent()" id="createEvBtn" ${ops.length === 0 ? 'disabled' : ''}><i class="bi bi-check-lg"></i> Buat Acara</button>
-        `);
+        showCreateEventModalWithOps(ops);
       })
       .withFailureHandler(err => showToast('Error', err.message, 'danger'))
       .getOperators();
+  }
+
+  function showCreateEventModalWithOps(ops) {
+    openModal(`
+      <div class="modal-header"><h3>Buat Acara Baru</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="form-group">
+        <label class="form-label">Nama Acara</label>
+        <input type="text" class="form-control" id="evNama" placeholder="Misal: Webinar AI & Machine Learning 2025">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tanggal Acara</label>
+        <input type="date" class="form-control" id="evTanggal">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Penyelenggara</label>
+        <input type="text" class="form-control" id="evPenyelenggara" placeholder="Misal: Fakultas Ilmu Komputer">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Operator Penanggung Jawab</label>
+        <select class="form-control" id="evOperator">
+          ${ops.length === 0 ? '<option value="">Belum ada operator aktif</option>' : ops.map(o => `<option value="${o.Username}">${escapeHtml(o.NamaLengkap)} (@${o.Username})</option>`).join('')}
+        </select>
+        ${ops.length === 0 ? '<div class="form-hint">Buat akun operator terlebih dahulu di menu "Akun Operator".</div>' : ''}
+      </div>
+      <button class="btn btn-primary btn-full" onclick="submitCreateEvent()" id="createEvBtn" ${ops.length === 0 ? 'disabled' : ''}><i class="bi bi-check-lg"></i> Buat Acara</button>
+    `);
   }
   
   function submitCreateEvent() {
@@ -764,7 +872,7 @@
         if (!res.success) { btn.disabled = false; btn.innerHTML = 'Buat Acara'; showToast('Gagal', res.message, 'danger'); return; }
         showToast('Berhasil', 'Acara berhasil dibuat.', 'success');
         closeModal();
-        renderAdminEvents();
+        renderAdminEvents(true);
       })
       .withFailureHandler(err => { btn.disabled = false; showToast('Error', err.message, 'danger'); })
       .createEvent(payload);
@@ -775,7 +883,7 @@
       .withSuccessHandler(res => {
         if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
         showToast('Berhasil', res.message, 'success');
-        renderAdminEvents();
+        renderAdminEvents(true);
       })
       .withFailureHandler(err => showToast('Error', err.message, 'danger'))
       .deactivateEvent(eventId);
@@ -786,30 +894,48 @@
    * ADMIN — AKUN OPERATOR
    * ============================================================
    */
-  function renderAdminOperators() {
+  function renderAdminOperators(forceRefresh) {
     const c = document.getElementById('app-container');
+    const cached = !forceRefresh && (typeof DataCache !== 'undefined') && DataCache.get('getOperators', []);
+
     c.innerHTML = `
       <div class="flex-between mb-16">
         <div>
           <h1 class="page-title">Akun Operator</h1>
           <p class="page-subtitle" style="margin:0;">Kelola kredensial operator per acara.</p>
         </div>
-        <button class="btn btn-primary" onclick="openCreateOperatorModal()"><i class="bi bi-plus-lg"></i> Buat Akun Operator</button>
+        <div class="flex gap-8">
+          <button class="btn btn-secondary btn-sm" id="btnRefreshOps" onclick="refreshAdminOperators()">
+            <i class="bi bi-arrow-clockwise" id="iconRefreshOps"></i> Segarkan
+          </button>
+          <button class="btn btn-primary" onclick="openCreateOperatorModal()"><i class="bi bi-plus-lg"></i> Buat Akun Operator</button>
+        </div>
       </div>
-      <div class="table-wrap" id="operatorsTableWrap">${skeletonBlock(240)}</div>`;
+      <div class="table-wrap" id="operatorsTableWrap">${cached ? '' : skeletonBlock(240)}</div>`;
   
-    GAS()
+    const gasCaller = forceRefresh ? GAS().fresh() : GAS();
+    gasCaller
       .withSuccessHandler(res => {
+        const icon = document.getElementById('iconRefreshOps');
+        if (icon) icon.classList.remove('spin-icon');
         if (!isCurrentPage('operators')) return;
         if (!res.success) { renderFetchError('operatorsTableWrap', res.message, 'renderAdminOperators'); return; }
         AppState.operatorsList = res.data;
         renderOperatorsTable();
       })
       .withFailureHandler(err => {
+        const icon = document.getElementById('iconRefreshOps');
+        if (icon) icon.classList.remove('spin-icon');
         if (!isCurrentPage('operators')) return;
         renderFetchError('operatorsTableWrap', err.message, 'renderAdminOperators');
       })
       .getOperators();
+  }
+
+  function refreshAdminOperators() {
+    const icon = document.getElementById('iconRefreshOps');
+    if (icon) icon.classList.add('spin-icon');
+    renderAdminOperators(true);
   }
   
   function renderOperatorsTable() {
@@ -912,28 +1038,48 @@
    * ADMIN — RIWAYAT GENERATE (AUDIT)
    * ============================================================
    */
-  function renderAdminHistory() {
+  function renderAdminHistory(forceRefresh) {
     const c = document.getElementById('app-container');
+    const cached = !forceRefresh && (typeof DataCache !== 'undefined') && DataCache.get('getGenerationHistory', [null]);
+
     c.innerHTML = `
-      <h1 class="page-title">Riwayat Generate</h1>
-      <p class="page-subtitle">Jejak audit seluruh sertifikat yang telah diterbitkan.</p>
+      <div class="flex-between mb-16">
+        <div>
+          <h1 class="page-title">Riwayat Generate</h1>
+          <p class="page-subtitle" style="margin:0;">Jejak audit seluruh sertifikat yang telah diterbitkan.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnRefreshHistory" onclick="refreshAdminHistory()">
+          <i class="bi bi-arrow-clockwise" id="iconRefreshHistory"></i> Segarkan
+        </button>
+      </div>
       <div class="card mb-16">
         <input type="text" class="form-control" id="historySearch" placeholder="Cari nama atau email peserta..." oninput="filterHistory()">
       </div>
-      <div class="table-wrap" id="historyTableWrap">${skeletonBlock(280)}</div>`;
+      <div class="table-wrap" id="historyTableWrap">${cached ? '' : skeletonBlock(280)}</div>`;
   
-    loadHistory();
+    loadHistory(forceRefresh);
+  }
+
+  function refreshAdminHistory() {
+    const icon = document.getElementById('iconRefreshHistory');
+    if (icon) icon.classList.add('spin-icon');
+    renderAdminHistory(true);
   }
   
-  function loadHistory() {
-    GAS()
+  function loadHistory(forceRefresh) {
+    const gasCaller = forceRefresh ? GAS().fresh() : GAS();
+    gasCaller
       .withSuccessHandler(res => {
+        const icon = document.getElementById('iconRefreshHistory');
+        if (icon) icon.classList.remove('spin-icon');
         if (!isCurrentPage('history')) return;
         if (!res.success) { renderFetchError('historyTableWrap', res.message, 'renderAdminHistory'); return; }
         AppState.historyRows = res.data;
         renderHistoryTable(res.data);
       })
       .withFailureHandler(err => {
+        const icon = document.getElementById('iconRefreshHistory');
+        if (icon) icon.classList.remove('spin-icon');
         if (!isCurrentPage('history')) return;
         renderFetchError('historyTableWrap', err.message, 'renderAdminHistory');
       })
@@ -979,7 +1125,7 @@
       .withSuccessHandler(res => {
         if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
         showToast('Berhasil', res.message, 'success');
-        loadHistory();
+        loadHistory(true);
       })
       .withFailureHandler(err => showToast('Error', err.message, 'danger'))
       .resendCertificateEmail(participantId);
@@ -990,24 +1136,45 @@
    * OPERATOR — RINGKASAN ACARA
    * ============================================================
    */
-  function renderOperatorOverview() {
+  function renderOperatorOverview(forceRefresh) {
     const c = document.getElementById('app-container');
+    const evId = AppState.operator ? AppState.operator.assignedEventId : null;
+    const cached = !forceRefresh && (typeof DataCache !== 'undefined') && DataCache.get('getOperatorDashboardStats', [evId]);
+
     c.innerHTML = `
-      <h1 class="page-title">Ringkasan Acara</h1>
-      <p class="page-subtitle">Kelola persiapan sertifikat untuk acara yang ditugaskan kepada Anda.</p>
-      <div id="opOverviewBody">${skeletonBlock(220)}</div>`;
+      <div class="flex-between mb-16">
+        <div>
+          <h1 class="page-title">Ringkasan Acara</h1>
+          <p class="page-subtitle" style="margin:0;">Kelola persiapan sertifikat untuk acara yang ditugaskan kepada Anda.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnRefreshOpOverview" onclick="refreshOperatorOverview()">
+          <i class="bi bi-arrow-clockwise" id="iconRefreshOpOverview"></i> Segarkan
+        </button>
+      </div>
+      <div id="opOverviewBody">${cached ? '' : skeletonBlock(220)}</div>`;
   
-    GAS()
+    const gasCaller = forceRefresh ? GAS().fresh() : GAS();
+    gasCaller
       .withSuccessHandler(res => {
+        const icon = document.getElementById('iconRefreshOpOverview');
+        if (icon) icon.classList.remove('spin-icon');
         if (!isCurrentPage('op-overview')) return;
         if (!res.success) { renderFetchError('opOverviewBody', res.message, 'renderOperatorOverview'); return; }
         renderOperatorOverviewBody(res.data);
       })
       .withFailureHandler(err => {
+        const icon = document.getElementById('iconRefreshOpOverview');
+        if (icon) icon.classList.remove('spin-icon');
         if (!isCurrentPage('op-overview')) return;
         renderFetchError('opOverviewBody', err.message, 'renderOperatorOverview');
       })
-      .getOperatorDashboardStats(AppState.operator.assignedEventId);
+      .getOperatorDashboardStats(evId);
+  }
+
+  function refreshOperatorOverview() {
+    const icon = document.getElementById('iconRefreshOpOverview');
+    if (icon) icon.classList.add('spin-icon');
+    renderOperatorOverview(true);
   }
   
   function renderOperatorOverviewBody(data) {
@@ -1018,6 +1185,7 @@
       return;
     }
     const ev = data.event;
+    window._opEditingEvent = ev;
     const step = ev.TemplateId ? (ev.Status === 'Active' ? 4 : 3) : 2;
     body.innerHTML = `
       ${renderStepper(step)}
@@ -1060,59 +1228,69 @@
       }).join('')}
     </div>`;
   }
-  
+
   /**
    * ============================================================
    * OPERATOR — ISI KONTEN & PILIH TEMPLATE
    * ============================================================
    */
-  function renderOperatorContent() {
+  async function renderOperatorContent() {
     const c = document.getElementById('app-container');
+    const evId = AppState.operator ? AppState.operator.assignedEventId : null;
+
+    // Cek apakah data event dan templates sudah ada di memori / cache
+    const cachedEv = window._opEditingEvent || (typeof DataCache !== 'undefined' && DataCache.get('getEventById', [evId])?.data?.data);
+    const cachedTpls = (typeof DataCache !== 'undefined' && DataCache.get('getTemplates', [])?.data?.data) || (AppState.templates.length ? AppState.templates : null);
+
+    if (cachedEv && cachedTpls) {
+      window._opEditingEvent = cachedEv;
+      window._opTemplatesList = cachedTpls;
+      const initialTemplateId = cachedEv.TemplateId || (cachedTpls.find(t => t.Status === 'Active') || {}).ID || '';
+      window._opSelectedTemplate = initialTemplateId;
+
+      const cachedFields = initialTemplateId ? (typeof DataCache !== 'undefined' && DataCache.get('getCertificateFields', [initialTemplateId])?.data?.data) : [];
+      if (cachedFields) {
+        c.innerHTML = `
+          <h1 class="page-title">Isi Konten & Template</h1>
+          <p class="page-subtitle">Pilih desain sertifikat dan lengkapi variabel acara.</p>
+          <div id="opContentBody"></div>`;
+        renderOperatorContentBody(cachedEv, cachedTpls, cachedFields);
+        return;
+      }
+    }
+
     c.innerHTML = `
       <h1 class="page-title">Isi Konten & Template</h1>
       <p class="page-subtitle">Pilih desain sertifikat dan lengkapi variabel acara.</p>
       <div id="opContentBody">${skeletonBlock(320)}</div>`;
-  
-    GAS()
-      .withSuccessHandler(eventRes => {
-        if (!isCurrentPage('op-content')) return;
-        if (!eventRes.success) { renderFetchError('opContentBody', eventRes.message, 'renderOperatorContent'); return; }
-        GAS()
-          .withSuccessHandler(tplRes => {
-            if (!isCurrentPage('op-content')) return;
-            const templates = tplRes.success ? tplRes.data : [];
-            window._opTemplatesList = templates;
-            const initialTemplateId = eventRes.data.TemplateId || (templates.find(t => t.Status === 'Active') || {}).ID || '';
-            window._opSelectedTemplate = initialTemplateId;
 
-            if (!initialTemplateId) {
-              // Belum ada template terpilih sama sekali — tampilkan grid saja,
-              // tanpa field kustom (nanti dimuat begitu operator memilih satu).
-              renderOperatorContentBody(eventRes.data, templates, []);
-              return;
-            }
-            GAS()
-              .withSuccessHandler(fieldsRes => {
-                if (!isCurrentPage('op-content')) return;
-                renderOperatorContentBody(eventRes.data, templates, fieldsRes.success ? fieldsRes.data : []);
-              })
-              .withFailureHandler(err => {
-                if (!isCurrentPage('op-content')) return;
-                renderFetchError('opContentBody', err.message, 'renderOperatorContent');
-              })
-              .getCertificateFields(initialTemplateId);
-          })
-          .withFailureHandler(err => {
-            if (!isCurrentPage('op-content')) return;
-            renderFetchError('opContentBody', err.message, 'renderOperatorContent');
-          })
-          .getTemplates();
-      })
-      .withFailureHandler(err => {
-        if (!isCurrentPage('op-content')) return;
-        renderFetchError('opContentBody', err.message, 'renderOperatorContent');
-      })
-      .getEventById(AppState.operator.assignedEventId);
+    try {
+      // Ambil data event dan daftar template secara PARALEL (jauh lebih cepat daripada berantai)
+      const [eventRes, tplRes] = await Promise.all([
+        GASPromise('getEventById', evId),
+        GASPromise('getTemplates')
+      ]);
+
+      if (!isCurrentPage('op-content')) return;
+      if (!eventRes.success) { renderFetchError('opContentBody', eventRes.message, 'renderOperatorContent'); return; }
+
+      const templates = tplRes.success ? tplRes.data : [];
+      window._opTemplatesList = templates;
+      const initialTemplateId = eventRes.data.TemplateId || (templates.find(t => t.Status === 'Active') || {}).ID || '';
+      window._opSelectedTemplate = initialTemplateId;
+
+      if (!initialTemplateId) {
+        renderOperatorContentBody(eventRes.data, templates, []);
+        return;
+      }
+
+      const fieldsRes = await GASPromise('getCertificateFields', initialTemplateId);
+      if (!isCurrentPage('op-content')) return;
+      renderOperatorContentBody(eventRes.data, templates, fieldsRes.success ? fieldsRes.data : []);
+    } catch (err) {
+      if (!isCurrentPage('op-content')) return;
+      renderFetchError('opContentBody', err.message, 'renderOperatorContent');
+    }
   }
   
   function renderOperatorContentBody(ev, templates, fields) {
@@ -1173,8 +1351,7 @@
   function selectOpTemplate(id) {
     if (id === window._opSelectedTemplate) return;
 
-    // Simpan dulu nilai yang sudah sempat diketik (mis. format nomor sertifikat)
-    // supaya tidak hilang saat struktur field dimuat ulang untuk template baru.
+    // Simpan dulu nilai yang sudah sempat diketik
     const currentValues = {};
     document.querySelectorAll('.op-field').forEach(el => currentValues[el.dataset.tag] = el.value);
     window._opEditingEvent.ContentValues = Object.assign({}, window._opEditingEvent.ContentValues, currentValues);
@@ -1182,10 +1359,16 @@
     window._opSelectedTemplate = id;
     const ev = window._opEditingEvent;
     const templates = window._opTemplatesList || [];
+
+    // Jika fields template ini sudah ada di cache, render seketika tanpa skeleton!
+    const cachedFields = (typeof DataCache !== 'undefined') && DataCache.get('getCertificateFields', [id]);
+    if (cachedFields && cachedFields.data && cachedFields.data.success) {
+      renderOperatorContentBody(ev, templates, cachedFields.data.data);
+      return;
+    }
+
     document.getElementById('opContentBody').innerHTML = skeletonBlock(320);
 
-    // Tiap template punya struktur variabel kontennya sendiri — muat ulang
-    // dari server setiap kali template berganti.
     GAS()
       .withSuccessHandler(res => {
         if (!isCurrentPage('op-content')) return;
@@ -1230,6 +1413,12 @@
       <h1 class="page-title">Pratinjau Sertifikat</h1>
       <p class="page-subtitle">Verifikasi tampilan sertifikat dengan data contoh sebelum dipublikasikan.</p>
       <div id="opPreviewBody">${skeletonBlock(320)}</div>`;
+
+    // Jika window._opEditingEvent sudah ada di memori dan template sudah dipilih, render instan!
+    if (window._opEditingEvent && window._opEditingEvent.TemplateId) {
+      renderOperatorPreviewBody(window._opEditingEvent);
+      return;
+    }
   
     GAS()
       .withSuccessHandler(res => {
@@ -1291,11 +1480,18 @@
       <h1 class="page-title">Publikasikan Tautan & QR</h1>
       <p class="page-subtitle">Sebarkan tautan pendaftaran ke calon peserta.</p>
       <div id="opPublishBody">${skeletonBlock(280)}</div>`;
+
+    // Jika window._opEditingEvent sudah ada di memori dan template sudah dipilih, render instan!
+    if (window._opEditingEvent && window._opEditingEvent.TemplateId) {
+      renderOperatorPublishBody(window._opEditingEvent);
+      return;
+    }
   
     GAS()
       .withSuccessHandler(res => {
         if (!isCurrentPage('op-publish')) return;
         if (!res.success) { renderFetchError('opPublishBody', res.message, 'renderOperatorPublish'); return; }
+        window._opEditingEvent = res.data;
         renderOperatorPublishBody(res.data);
       })
       .withFailureHandler(err => {
