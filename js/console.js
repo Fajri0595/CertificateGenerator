@@ -303,7 +303,13 @@
         const evId = AppState.operator.assignedEventId;
         GAS().getOperatorDashboardStats(evId);
         GAS().getEventById(evId);
-        GAS().getTemplates();
+        GAS().withSuccessHandler(res => {
+          if (res.success && Array.isArray(res.data)) {
+            res.data.filter(t => t.Status === 'Active').forEach(t => {
+              GAS().getCertificateFields(t.ID);
+            });
+          }
+        }).getTemplates();
       }
     }, 200);
   }
@@ -566,22 +572,49 @@
       .withSuccessHandler(res => {
         btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Simpan Template';
         if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
-        showToast('Berhasil', 'Template ditambahkan.', 'success');
+        showToast('Berhasil', 'Template berhasil ditambahkan.', 'success');
         closeModal();
-        loadTemplates(() => renderTemplatesGrid());
+        if (res.data && res.data.ID) {
+          if (!Array.isArray(AppState.templates)) AppState.templates = [];
+          AppState.templates.unshift(res.data);
+          if (typeof DataCache !== 'undefined') {
+            DataCache.set('getTemplates', [], { success: true, data: AppState.templates });
+          }
+          renderTemplatesGrid();
+        } else {
+          loadTemplates(() => renderTemplatesGrid());
+        }
       })
-      .withFailureHandler(err => { btn.disabled = false; btn.innerHTML = 'Simpan'; showToast('Error', err.message, 'danger'); })
+      .withFailureHandler(err => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Simpan Template'; showToast('Error', err.message, 'danger'); })
       .addTemplate(name, slide);
   }
   
   function toggleTemplate(id) {
+    const t = AppState.templates && AppState.templates.find(x => x.ID === id);
+    if (!t) return;
+    const oldStatus = t.Status;
+    const newStatus = oldStatus === 'Active' ? 'Inactive' : 'Active';
+    t.Status = newStatus;
+    renderTemplatesGrid(); // Update tampilan seketika (0 ms)
+
     GAS()
       .withSuccessHandler(res => {
-        if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
-        showToast('Berhasil', 'Status template diperbarui.', 'success');
-        loadTemplates(() => renderTemplatesGrid());
+        if (!res.success) {
+          t.Status = oldStatus;
+          renderTemplatesGrid();
+          showToast('Gagal', res.message, 'danger');
+          return;
+        }
+        if (typeof DataCache !== 'undefined') {
+          DataCache.set('getTemplates', [], { success: true, data: AppState.templates });
+        }
+        showToast('Berhasil', `Status template diperbarui menjadi ${newStatus === 'Active' ? 'Aktif' : 'Nonaktif'}.`, 'success');
       })
-      .withFailureHandler(err => showToast('Error', err.message, 'danger'))
+      .withFailureHandler(err => {
+        t.Status = oldStatus;
+        renderTemplatesGrid();
+        showToast('Error', err.message, 'danger');
+      })
       .toggleTemplateStatus(id);
   }
   
@@ -731,10 +764,18 @@
       .withSuccessHandler(res => {
         btn.disabled = false; btn.innerHTML = '<i class="bi bi-save"></i> Simpan Struktur Template Ini';
         if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
-        showToast('Berhasil', res.message, 'success');
-        onFieldsTemplateChange();
+        showToast('Berhasil', res.message || 'Struktur template berhasil disimpan.', 'success');
+        AppState.certificateFields = fields;
+        if (typeof DataCache !== 'undefined') {
+          DataCache.set('getCertificateFields', [window._fieldsSelectedTemplate], { success: true, data: fields });
+        }
+        renderFieldsEditor();
       })
-      .withFailureHandler(err => { btn.disabled = false; showToast('Error', err.message, 'danger'); })
+      .withFailureHandler(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-save"></i> Simpan Struktur Template Ini';
+        showToast('Error', err.message, 'danger');
+      })
       .saveCertificateFields(window._fieldsSelectedTemplate, fields);
   }
   
@@ -872,23 +913,57 @@
   
     GAS()
       .withSuccessHandler(res => {
-        if (!res.success) { btn.disabled = false; btn.innerHTML = 'Buat Acara'; showToast('Gagal', res.message, 'danger'); return; }
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Buat Acara';
+        if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
         showToast('Berhasil', 'Acara berhasil dibuat.', 'success');
         closeModal();
-        renderAdminEvents(true);
+
+        const newEvent = (res.data && res.data.ID) ? res.data : {
+          ID: (res.data && (res.data.id || res.data.ID)) || ('EV-' + Date.now()),
+          Nama: payload.nama,
+          Tanggal: payload.tanggal,
+          Penyelenggara: payload.penyelenggara,
+          OperatorUsername: payload.operatorUsername,
+          TemplateId: '',
+          Status: 'Active',
+          CreatedAt: new Date().toISOString()
+        };
+        if (!Array.isArray(AppState.events)) AppState.events = [];
+        AppState.events.push(newEvent);
+        if (typeof DataCache !== 'undefined') {
+          DataCache.set('getEvents', [], { success: true, data: AppState.events });
+        }
+        renderEventsTable();
       })
-      .withFailureHandler(err => { btn.disabled = false; showToast('Error', err.message, 'danger'); })
+      .withFailureHandler(err => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Buat Acara'; showToast('Error', err.message, 'danger'); })
       .createEvent(payload);
   }
   
   function deactivateEventAction(eventId) {
+    const ev = AppState.events && AppState.events.find(e => e.ID === eventId);
+    if (!ev) return;
+    const oldStatus = ev.Status;
+    ev.Status = 'Inactive';
+    renderEventsTable(); // Update tampilan seketika (0 ms)
+
     GAS()
       .withSuccessHandler(res => {
-        if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
-        showToast('Berhasil', res.message, 'success');
-        renderAdminEvents(true);
+        if (!res.success) {
+          ev.Status = oldStatus;
+          renderEventsTable();
+          showToast('Gagal', res.message, 'danger');
+          return;
+        }
+        if (typeof DataCache !== 'undefined') {
+          DataCache.set('getEvents', [], { success: true, data: AppState.events });
+        }
+        showToast('Berhasil', 'Acara dinonaktifkan.', 'success');
       })
-      .withFailureHandler(err => showToast('Error', err.message, 'danger'))
+      .withFailureHandler(err => {
+        ev.Status = oldStatus;
+        renderEventsTable();
+        showToast('Error', err.message, 'danger');
+      })
       .deactivateEvent(eventId);
   }
   
@@ -959,7 +1034,7 @@
               <td>${o.AssignedEventId ? '<span class="badge badge-info">Ditugaskan</span>' : '<span class="text-muted">Belum ada</span>'}</td>
               <td>${o.Status === 'Active' ? '<span class="badge badge-success"><span class="badge-dot"></span> Aktif</span>' : '<span class="badge badge-danger">Nonaktif</span>'}</td>
               <td class="text-right">
-                <button class="btn btn-secondary btn-sm" onclick="regenPassword('${o.Username}')">Reset Password</button>
+                <button class="btn btn-secondary btn-sm" onclick="regenPassword('${o.Username}', this)">Reset Password</button>
                 <button class="btn ${o.Status === 'Active' ? 'btn-danger' : 'btn-secondary'} btn-sm" onclick="toggleOperator('${o.Username}')">${o.Status === 'Active' ? 'Nonaktifkan' : 'Aktifkan'}</button>
               </td>
             </tr>`).join('')}
@@ -992,11 +1067,30 @@
   
     GAS()
       .withSuccessHandler(res => {
-        if (!res.success) { btn.disabled = false; btn.innerHTML = 'Buat Akun'; showToast('Gagal', res.message, 'danger'); return; }
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Buat Akun';
+        if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
+
+        // Optimasi: tambahkan ke memori lokal seketika tanpa request ganda ke server
+        const newOp = {
+          NamaLengkap: namaLengkap,
+          Username: username,
+          AssignedEventId: '',
+          Status: 'Active'
+        };
+        if (!Array.isArray(AppState.operatorsList)) AppState.operatorsList = [];
+        const exists = AppState.operatorsList.some(o => o.Username.toLowerCase() === username.toLowerCase());
+        if (!exists) {
+          AppState.operatorsList.unshift(newOp);
+        }
+        if (typeof DataCache !== 'undefined') {
+          DataCache.set('getOperators', [], { success: true, data: AppState.operatorsList });
+        }
+
         showCredentialResult(res.data.username, res.data.password);
-        renderAdminOperators();
+        renderOperatorsTable(); // Langsung perbarui tabel dalam 0 ms
+        showToast('Berhasil', `Akun operator @${username} berhasil dibuat.`, 'success');
       })
-      .withFailureHandler(err => { btn.disabled = false; showToast('Error', err.message, 'danger'); })
+      .withFailureHandler(err => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Buat Akun'; showToast('Error', err.message, 'danger'); })
       .createOperatorAccount({ namaLengkap, username });
   }
   
@@ -1016,23 +1110,55 @@
   function escapeJs(str) { return String(str).replace(/'/g, "\\'"); }
   
   function toggleOperator(username) {
+    const op = AppState.operatorsList && AppState.operatorsList.find(o => o.Username === username);
+    if (!op) return;
+    const oldStatus = op.Status;
+    const newStatus = oldStatus === 'Active' ? 'Inactive' : 'Active';
+    op.Status = newStatus;
+    renderOperatorsTable(); // Update tampilan seketika (0 ms)
+
     GAS()
       .withSuccessHandler(res => {
-        if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
-        showToast('Berhasil', 'Status operator diperbarui.', 'success');
-        renderAdminOperators();
+        if (!res.success) {
+          op.Status = oldStatus;
+          renderOperatorsTable();
+          showToast('Gagal', res.message, 'danger');
+          return;
+        }
+        if (typeof DataCache !== 'undefined') {
+          DataCache.set('getOperators', [], { success: true, data: AppState.operatorsList });
+        }
+        showToast('Berhasil', `Status operator @${username} diperbarui menjadi ${newStatus === 'Active' ? 'Aktif' : 'Nonaktif'}.`, 'success');
       })
-      .withFailureHandler(err => showToast('Error', err.message, 'danger'))
+      .withFailureHandler(err => {
+        op.Status = oldStatus;
+        renderOperatorsTable();
+        showToast('Error', err.message, 'danger');
+      })
       .toggleOperatorStatus(username);
   }
   
-  function regenPassword(username) {
+  function regenPassword(username, btnEl) {
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = '<span class="spinner spinner-sm"></span> Reset...';
+    }
     GAS()
       .withSuccessHandler(res => {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.innerHTML = 'Reset Password';
+        }
         if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
         showCredentialResult(username, res.data.password);
       })
-      .withFailureHandler(err => showToast('Error', err.message, 'danger'))
+      .withFailureHandler(err => {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.innerHTML = 'Reset Password';
+        }
+        showToast('Error', err.message, 'danger');
+      })
       .regenerateOperatorPassword(username);
   }
   
@@ -1116,21 +1242,38 @@
               <td>${statusBadge(r.emailStatus)}</td>
               <td class="text-right">
                 <a href="${r.fileUrl}" target="_blank" class="btn-ghost">Lihat File</a>
-                ${r.emailStatus !== 'Terkirim' ? `<button class="btn-ghost" onclick="resendEmail('${r.id}')">Kirim Ulang</button>` : ''}
+                ${r.emailStatus !== 'Terkirim' ? `<button class="btn-ghost" onclick="resendEmail('${r.id}', this)">Kirim Ulang</button>` : ''}
               </td>
             </tr>`).join('')}
         </tbody>
       </table>`;
   }
   
-  function resendEmail(participantId) {
+  function resendEmail(participantId, btnEl) {
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = '<span class="spinner spinner-sm"></span> Mengirim...';
+    }
     GAS()
       .withSuccessHandler(res => {
-        if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
+        if (!res.success) {
+          if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Kirim Ulang'; }
+          showToast('Gagal', res.message, 'danger');
+          return;
+        }
         showToast('Berhasil', res.message, 'success');
-        loadHistory(true);
+        const row = AppState.historyRows && AppState.historyRows.find(r => r.id === participantId);
+        if (row) {
+          row.emailStatus = 'Terkirim';
+          renderHistoryTable(AppState.historyRows);
+        } else {
+          loadHistory(true);
+        }
       })
-      .withFailureHandler(err => showToast('Error', err.message, 'danger'))
+      .withFailureHandler(err => {
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Kirim Ulang'; }
+        showToast('Error', err.message, 'danger');
+      })
       .resendCertificateEmail(participantId);
   }
   
@@ -1399,9 +1542,16 @@
         if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
         localStorage.removeItem('certgen_draft_' + window._opEditingEvent.ID);
         showToast('Berhasil', res.message, 'success');
+
+        // Optimasi: update state lokal & cache seketika
+        window._opEditingEvent.TemplateId = window._opSelectedTemplate;
+        window._opEditingEvent.ContentValues = contentValues;
+        if (typeof DataCache !== 'undefined') {
+          DataCache.set('getEventById', [window._opEditingEvent.ID], { success: true, data: window._opEditingEvent });
+        }
         navigateTo('op-preview');
       })
-      .withFailureHandler(err => { btn.disabled = false; showToast('Error', err.message, 'danger'); })
+      .withFailureHandler(err => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-right"></i> Simpan & Lanjut ke Pratinjau'; showToast('Error', err.message, 'danger'); })
       .updateEventContent(window._opEditingEvent.ID, window._opSelectedTemplate, contentValues);
   }
   
@@ -1545,11 +1695,18 @@
   
     GAS()
       .withSuccessHandler(res => {
-        if (!res.success) { btn.disabled = false; btn.innerHTML = 'Publikasikan Sekarang'; showToast('Gagal', res.message, 'danger'); return; }
+        btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Publikasikan Sekarang';
+        if (!res.success) { showToast('Gagal', res.message, 'danger'); return; }
         showToast('Berhasil', 'Acara berhasil dipublikasikan.', 'success');
+        if (window._opEditingEvent) {
+          window._opEditingEvent.Status = 'Active';
+          if (typeof DataCache !== 'undefined') {
+            DataCache.set('getEventById', [eventId], { success: true, data: window._opEditingEvent });
+          }
+        }
         renderOperatorPublish();
       })
-      .withFailureHandler(err => { btn.disabled = false; showToast('Error', err.message, 'danger'); })
+      .withFailureHandler(err => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Publikasikan Sekarang'; showToast('Error', err.message, 'danger'); })
       .publishEvent(eventId);
   }
   

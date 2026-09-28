@@ -69,6 +69,15 @@ const DataCache = {
     this._store.set(key, { data, timestamp: Date.now() });
   },
 
+  update(action, args, updaterFn) {
+    const entry = this.get(action, args);
+    if (entry && entry.data) {
+      const updated = updaterFn(entry.data);
+      if (updated !== undefined) entry.data = updated;
+      entry.timestamp = Date.now();
+    }
+  },
+
   invalidate(actionPattern) {
     if (!actionPattern) {
       this._store.clear();
@@ -241,4 +250,17 @@ async function fetchFromNetwork_(action, args, onSuccess, onFailure) {
     const errorObj = err instanceof Error ? err : new Error(String(err));
     if (onFailure) onFailure(errorObj);
   }
+}
+
+/**
+ * Keep-Alive Heartbeat untuk menjaga container Google Apps Script tetap aktif
+ * saat user sedang membuka aplikasi, mencegah jeda cold start 3-5 detik.
+ */
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && typeof currentSessionToken_ === 'function' && currentSessionToken_()) {
+      const pingAction = (typeof AppState !== 'undefined' && AppState.role === 'operator') ? 'getTemplates' : 'getAdminDashboardStats';
+      fetch(`${GAS_URL}?action=${pingAction}&args=%5B%5D&token=${encodeURIComponent(currentSessionToken_() || '')}`).catch(() => {});
+    }
+  }, 4 * 60 * 1000);
 }
