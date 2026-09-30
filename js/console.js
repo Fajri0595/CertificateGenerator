@@ -1465,18 +1465,21 @@
       <div class="callout callout-info mb-16"><i class="bi bi-info-circle" style="margin-top:1px;"></i><div>Field <strong>Nama Peserta</strong> dan <strong>Peran</strong> otomatis terisi dari formulir pendaftaran peserta — tidak perlu diisi manual di sini. Struktur field kustom di bawah mengikuti template yang dipilih di atas.</div></div>
       ${!window._opSelectedTemplate ? '<div class="card table-empty">Pilih salah satu template di atas untuk melihat variabel kontennya.</div>' : `
       <div class="card">
-        <div class="form-group">
-          <label class="form-label">Format Nomor Sertifikat</label>
-          <input type="text" class="form-control mono op-field" data-tag="nomor_sertifikat" value="${escapeHtml((ev.ContentValues || {}).nomor_sertifikat || 'CERT/{YYYY}/{SEQ:000}')}">
-          <div class="form-hint">Gunakan <span class="tag-chip">{YYYY}</span> untuk tahun, dan <span class="tag-chip">{SEQ:000}</span> untuk nomor urut mulai dari 1 (atau <span class="tag-chip">{SEQ:030}</span> untuk mulai dari nomor 030 dan seterusnya).</div>
-        </div>
-        ${customFields.map(f => `
-          <div class="form-group">
+        ${customFields.map(f => {
+          if (f.VariableTag === 'nomor_sertifikat') {
+            return `<div class="form-group">
+              <label class="form-label">${escapeHtml(f.FieldLabel)}</label>
+              <input type="text" class="form-control mono op-field" data-tag="nomor_sertifikat" value="${escapeHtml((ev.ContentValues || {}).nomor_sertifikat || '{SEQ:006}/FAKTA/SE/X/{YYYY}')}">
+              <div class="form-hint">Gunakan <span class="tag-chip">{YYYY}</span> untuk tahun, dan <span class="tag-chip">{SEQ:000}</span> untuk nomor urut mulai dari 1 (atau <span class="tag-chip">{SEQ:030}</span> untuk mulai dari nomor 030 dan seterusnya).</div>
+            </div>`;
+          }
+          return `<div class="form-group">
             <label class="form-label">${escapeHtml(f.FieldLabel)}</label>
             ${f.InputType === 'textarea'
               ? `<textarea class="form-control op-field" data-tag="${f.VariableTag}">${escapeHtml((ev.ContentValues || {})[f.VariableTag] || '')}</textarea>`
               : `<input type="${f.InputType === 'date' ? 'date' : 'text'}" class="form-control op-field" data-tag="${f.VariableTag}" value="${escapeHtml((ev.ContentValues || {})[f.VariableTag] || '')}">`}
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>`}
       <div class="flex-between mt-24">
         <span class="text-muted" style="font-size:12px;" id="draftSavedNote"></span>
