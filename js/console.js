@@ -376,6 +376,85 @@
         </button>
       </div>
       <div id="dashStats" class="grid grid-4 mb-16">${cached ? '' : [1,2,3,4].map(() => skeletonBlock(100)).join('')}</div>
+      
+      <!-- Panduan Alur Kerja Cepat -->
+      <div class="card mb-16" style="background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%); border: 1px solid var(--border-subtle); border-left: 4px solid var(--primary); box-shadow: var(--shadow-1);">
+        <div class="flex-between mb-16" style="flex-wrap: wrap; gap: 8px;">
+          <div class="flex-center gap-12">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(79, 70, 229, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+              <i class="bi bi-compass"></i>
+            </div>
+            <div>
+              <h2 class="section-title" style="margin: 0; font-size: 16px;">Panduan Memulai Cepat (Workflow Acara)</h2>
+              <p class="text-muted" style="margin: 0; font-size: 12.5px;">Ikuti 4 langkah berurutan untuk menyiapkan penerbitan sertifikat acara:</p>
+            </div>
+          </div>
+          <span class="badge badge-info"><i class="bi bi-diagram-3"></i> 4 Langkah Mudah</span>
+        </div>
+
+        <div class="grid grid-4 mb-16" style="gap: 12px;">
+          <!-- Langkah 1 -->
+          <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-xs);">
+            <div>
+              <div class="flex-between mb-8">
+                <span style="font-size: 10.5px; font-weight: 700; color: var(--primary); background: rgba(79,70,229,0.08); padding: 3px 8px; border-radius: 4px; letter-spacing: 0.04em;">LANGKAH 1</span>
+                <i class="bi bi-easel3 text-muted" style="font-size: 16px;"></i>
+              </div>
+              <strong style="font-size: 13.5px; display: block; margin-bottom: 6px; color: var(--text-primary);">Template Sertifikat</strong>
+              <p class="text-muted" style="font-size: 11.5px; margin: 0; line-height: 1.45;">Hubungkan file Google Slides. Wajib ada tag <span class="tag-chip" style="font-size:10px;">{{nama_peserta}}</span> dan <span class="tag-chip" style="font-size:10px;">{{peran}}</span>.</p>
+            </div>
+            <button class="btn btn-secondary btn-sm mt-16 w-100" onclick="navigateTo('templates')" style="font-size: 12px; height: 32px;"><i class="bi bi-arrow-right"></i> Buka Template</button>
+          </div>
+
+          <!-- Langkah 2 -->
+          <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-xs);">
+            <div>
+              <div class="flex-between mb-8">
+                <span style="font-size: 10.5px; font-weight: 700; color: var(--primary); background: rgba(79,70,229,0.08); padding: 3px 8px; border-radius: 4px; letter-spacing: 0.04em;">LANGKAH 2</span>
+                <i class="bi bi-ui-checks-grid text-muted" style="font-size: 16px;"></i>
+              </div>
+              <strong style="font-size: 13.5px; display: block; margin-bottom: 6px; color: var(--text-primary);">Struktur Konten</strong>
+              <p class="text-muted" style="font-size: 11.5px; margin: 0; line-height: 1.45;">Atur variabel kustom per template jika ada (misal: nomor sertifikat, dll). Lewati jika tidak ada variabel ekstra.</p>
+            </div>
+            <button class="btn btn-secondary btn-sm mt-16 w-100" onclick="navigateTo('fields')" style="font-size: 12px; height: 32px;"><i class="bi bi-arrow-right"></i> Atur Variabel</button>
+          </div>
+
+          <!-- Langkah 3 -->
+          <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-xs);">
+            <div>
+              <div class="flex-between mb-8">
+                <span style="font-size: 10.5px; font-weight: 700; color: var(--primary); background: rgba(79,70,229,0.08); padding: 3px 8px; border-radius: 4px; letter-spacing: 0.04em;">LANGKAH 3</span>
+                <i class="bi bi-people text-muted" style="font-size: 16px;"></i>
+              </div>
+              <strong style="font-size: 13.5px; display: block; margin-bottom: 6px; color: var(--text-primary);">Akun Operator</strong>
+              <p class="text-muted" style="font-size: 11.5px; margin: 0; line-height: 1.45;">Buat akun login operator dan salin password awal yang digenerate sistem untuk dibagikan.</p>
+            </div>
+            <button class="btn btn-secondary btn-sm mt-16 w-100" onclick="navigateTo('operators')" style="font-size: 12px; height: 32px;"><i class="bi bi-arrow-right"></i> Buat Operator</button>
+          </div>
+
+          <!-- Langkah 4 -->
+          <div style="background: #ffffff; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); padding: 14px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow-xs);">
+            <div>
+              <div class="flex-between mb-8">
+                <span style="font-size: 10.5px; font-weight: 700; color: var(--primary); background: rgba(79,70,229,0.08); padding: 3px 8px; border-radius: 4px; letter-spacing: 0.04em;">LANGKAH 4</span>
+                <i class="bi bi-calendar-event text-muted" style="font-size: 16px;"></i>
+              </div>
+              <strong style="font-size: 13.5px; display: block; margin-bottom: 6px; color: var(--text-primary);">Buat Acara</strong>
+              <p class="text-muted" style="font-size: 11.5px; margin: 0; line-height: 1.45;">Buat acara dan tugaskan ke operator. Operator lalu mengisi konten & membagikan link form.</p>
+            </div>
+            <button class="btn btn-secondary btn-sm mt-16 w-100" onclick="navigateTo('events')" style="font-size: 12px; height: 32px;"><i class="bi bi-arrow-right"></i> Kelola Acara</button>
+          </div>
+        </div>
+
+        <div class="callout callout-warning" style="margin: 0; padding: 11px 16px;">
+          <i class="bi bi-info-circle-fill" style="color: #D97706; margin-top: 2px;"></i>
+          <div>
+            <strong style="color: #92400E;">Ketentuan Khusus Operator:</strong> 
+            Setiap 1 akun operator ditugaskan khusus untuk <strong>1 agenda/acara aktif</strong>. Saat operator login, sistem otomatis langsung membawanya ke lembar kerja acara miliknya tanpa kebingungan memilih acara.
+          </div>
+        </div>
+      </div>
+
       <div class="card" id="dashRecent">${cached ? '' : skeletonBlock(200)}</div>`;
   
     const gasCaller = forceRefresh ? GAS().fresh() : GAS();
@@ -801,6 +880,10 @@
           <button class="btn btn-primary" onclick="openCreateEventModal()"><i class="bi bi-plus-lg"></i> Buat Acara</button>
         </div>
       </div>
+      <div class="callout callout-info mb-16">
+        <i class="bi bi-info-circle" style="margin-top:1px;"></i>
+        <div><strong>Ketentuan Penugasan Operator:</strong> 1 akun operator hanya menangani <strong>1 agenda/acara aktif</strong>. Saat membuat acara, pilihlah operator yang masih tersedia atau buat operator baru di menu <a href="javascript:void(0)" onclick="navigateTo('operators')" style="font-weight:600;text-decoration:underline;color:inherit;">Akun Operator</a>.</div>
+      </div>
       <div class="table-wrap" id="eventsTableWrap">${cached ? '' : skeletonBlock(240)}</div>`;
   
     const gasCaller = forceRefresh ? GAS().fresh() : GAS();
@@ -875,6 +958,10 @@
   function showCreateEventModalWithOps(ops) {
     openModal(`
       <div class="modal-header"><h3>Buat Acara Baru</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+      <div class="callout callout-info mb-16">
+        <i class="bi bi-info-circle" style="margin-top:1px;"></i>
+        <div><strong>Ketentuan Operator:</strong> 1 akun operator memegang <strong>1 acara aktif</strong>. Pilihlah operator yang belum ditugaskan ke acara lain.</div>
+      </div>
       <div class="form-group">
         <label class="form-label">Nama Acara</label>
         <input type="text" class="form-control" id="evNama" placeholder="Misal: Webinar AI & Machine Learning 2025">
@@ -890,9 +977,12 @@
       <div class="form-group">
         <label class="form-label">Operator Penanggung Jawab</label>
         <select class="form-control" id="evOperator">
-          ${ops.length === 0 ? '<option value="">Belum ada operator aktif</option>' : ops.map(o => `<option value="${o.Username}">${escapeHtml(o.NamaLengkap)} (@${o.Username})</option>`).join('')}
+          ${ops.length === 0 ? '<option value="">Belum ada operator aktif</option>' : ops.map(o => {
+            const isAssigned = !!o.AssignedEventId;
+            return `<option value="${o.Username}">${escapeHtml(o.NamaLengkap)} (@${o.Username})${isAssigned ? ' — [Sudah Ada Acara]' : ' — [Tersedia]'}</option>`;
+          }).join('')}
         </select>
-        ${ops.length === 0 ? '<div class="form-hint">Buat akun operator terlebih dahulu di menu "Akun Operator".</div>' : ''}
+        <div class="form-hint" style="margin-top:6px;">${ops.length === 0 ? 'Buat akun operator terlebih dahulu di menu "Akun Operator".' : '1 operator = 1 acara aktif. Jika semua operator sudah ditugaskan, silakan buat akun operator baru di menu "Akun Operator".'}</div>
       </div>
       <button class="btn btn-primary btn-full" onclick="submitCreateEvent()" id="createEvBtn" ${ops.length === 0 ? 'disabled' : ''}><i class="bi bi-check-lg"></i> Buat Acara</button>
     `);
@@ -989,6 +1079,10 @@
           <button class="btn btn-primary" onclick="openCreateOperatorModal()"><i class="bi bi-plus-lg"></i> Buat Akun Operator</button>
         </div>
       </div>
+      <div class="callout callout-info mb-16">
+        <i class="bi bi-people-fill" style="margin-top:1px;"></i>
+        <div><strong>Prinsip 1 Operator = 1 Acara:</strong> Setiap 1 akun operator didedikasikan untuk mengelola <strong>1 acara/agenda aktif</strong>. Operator yang login akan otomatis langsung diarahkan ke halaman kerja acara yang ditugaskan kepada mereka.</div>
+      </div>
       <div class="table-wrap" id="operatorsTableWrap">${cached ? '' : skeletonBlock(240)}</div>`;
   
     const gasCaller = forceRefresh ? GAS().fresh() : GAS();
@@ -1046,6 +1140,7 @@
     openModal(`
       <div class="modal-header"><h3>Buat Akun Operator</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
       <div class="callout callout-info mb-16"><i class="bi bi-shield-check" style="margin-top:1px;"></i><div>Password akan digenerate otomatis dan hanya ditampilkan sekali. Segera salin dan bagikan secara aman.</div></div>
+      <div class="callout callout-warning mb-16"><i class="bi bi-info-circle" style="margin-top:1px;"></i><div><strong>Catatan:</strong> 1 akun operator ini nantinya didedikasikan untuk <strong>1 agenda/acara</strong> pada menu "Acara".</div></div>
       <div class="form-group">
         <label class="form-label">Nama Lengkap</label>
         <input type="text" class="form-control" id="opNamaLengkap" placeholder="Nama operator">
